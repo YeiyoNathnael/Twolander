@@ -17,9 +17,10 @@ export default defineEventHandler(async (event) => {
   const startDate = new Date(start)
   const endDate = new Date(end)
 
-  // 1. Check overlapping events in the calendar for this couple
+  // 1. Only Sacred Us Time events block or warn on double-booking
   const conditions = [
     eq(events.coupleId, session.user.coupleId),
+    eq(events.isSacred, true),
     lt(events.start, endDate),
     gt(events.end, startDate),
   ]
@@ -27,7 +28,7 @@ export default defineEventHandler(async (event) => {
     conditions.push(ne(events.id, excludeId))
   }
 
-  const overlappingEvents = await db.query.events.findMany({
+  const overlappingSacredEvents = await db.query.events.findMany({
     where: and(...conditions),
     with: {
       creator: {
@@ -45,20 +46,20 @@ export default defineEventHandler(async (event) => {
     creatorName?: string
   }> = []
 
-  for (const ev of overlappingEvents) {
+  for (const ev of overlappingSacredEvents) {
     const isPartner = ev.creatorId !== session.user.id
     const title = isPartner && ev.isPrivate ? 'Busy (Partner)' : ev.title
     conflicts.push({
-      type: ev.isSacred ? 'sacred' : 'event',
+      type: 'sacred',
       title,
       start: typeof ev.start === 'object' ? (ev.start as Date).toISOString() : String(ev.start),
       end: typeof ev.end === 'object' ? (ev.end as Date).toISOString() : String(ev.end),
-      isSacred: ev.isSacred,
+      isSacred: true,
       creatorName: ev.creator?.name,
     })
   }
 
-  // 2. Check overlapping Sacred Time rules
+  // 2. Check overlapping Sacred Time recurring rules
   const allSacredRules = await db.query.sacredTimes.findMany({
     where: eq(sacredTimes.coupleId, session.user.coupleId),
   })
@@ -77,7 +78,6 @@ export default defineEventHandler(async (event) => {
     }
 
     if (matches) {
-      // Build ISO for rule on this event's date
       const ruleStartIso = `${eventDateStr}T${rule.startTime}:00.000Z`
       const ruleEndIso = `${eventDateStr}T${rule.endTime}:00.000Z`
       const ruleStartMs = new Date(ruleStartIso).getTime()

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { SacredTimeItem, SSEMessage, CalendarEvent } from '~/shared/types'
+import type { SacredTimeItem, SSEMessage } from '~/shared/types'
 import type { SacredTimeInput } from '~/shared/schemas/sacred-time.schema'
 
 export interface ConflictItem {
@@ -54,8 +54,8 @@ export const useSacredTimesStore = defineStore('sacredTimes', () => {
 
   /**
    * Dual-layer conflict check:
-   * 1. Instant client-side check against in-memory events
-   * 2. Server check against persisted events & sacred time rules
+   * Only triggers when booking over protected "Sacred Us Time" blocks.
+   * Individual / separate events can coexist freely without interference.
    */
   async function checkConflict(
     startIso: string,
@@ -67,9 +67,11 @@ export const useSacredTimesStore = defineStore('sacredTimes', () => {
     const startMs = new Date(startIso).getTime()
     const endMs = new Date(endIso).getTime()
 
-    // 1. In-memory event interval overlap check: startA < endB && endA > startB
+    // 1. In-memory check against protected Sacred Us Time events
     for (const ev of eventsStore.events) {
       if (excludeId && ev.id === excludeId) continue
+      if (!ev.isSacred) continue // Independent individual events coexist freely
+
       const evStartMs = new Date(ev.start).getTime()
       const evEndMs = new Date(ev.end).getTime()
 
@@ -77,17 +79,17 @@ export const useSacredTimesStore = defineStore('sacredTimes', () => {
         const isPartner = ev.creatorId !== auth.user?.id
         const title = isPartner && ev.isPrivate ? 'Busy (Partner)' : ev.title
         conflicts.push({
-          type: ev.isSacred ? 'sacred' : 'event',
+          type: 'sacred',
           title,
           start: ev.start,
           end: ev.end,
-          isSacred: ev.isSacred,
+          isSacred: true,
           creatorName: ev.creator?.name,
         })
       }
     }
 
-    // 2. Server check
+    // 2. Server check against persisted Sacred Time rules
     try {
       const serverCheck = await $fetch<{ hasConflict: boolean; conflicts: ConflictItem[] }>(
         '/api/events/check-conflict',
