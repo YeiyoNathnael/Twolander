@@ -19,6 +19,7 @@ export default defineEventHandler(async (event) => {
 
   const config = useRuntimeConfig()
   const apiKey = config.geminiApiKey || process.env.GEMINI_API_KEY || process.env.NUXT_GEMINI_API_KEY
+  const modelName = process.env.AI_MODEL || process.env.GEMINI_MODEL || 'gemma-4-31b-it'
 
   if (apiKey) {
     try {
@@ -44,7 +45,7 @@ Rules:
 - Return ONLY the JSON object, without markdown triple-backticks.`
 
       const response = await $fetch<any>(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           body: {
@@ -100,7 +101,7 @@ Rules:
         }
       }
     } catch (err) {
-      console.warn('[AI Parser] Gemini API failed, using heuristic fallback:', err)
+      console.warn('[AI Parser] Gemma API call failed, attempting fallback:', err)
     }
   }
 
