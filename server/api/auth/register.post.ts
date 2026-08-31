@@ -48,12 +48,22 @@ export default defineEventHandler(async (event) => {
       coupleId = couple.id
       deleteCookie(event, 'pending_invite')
     } else {
-      const [newCouple] = await db.insert(couples).values({}).returning()
+      const [newCouple] = await db
+        .insert(couples)
+        .values({
+          inviteCode: crypto.randomUUID().slice(0, 8),
+        })
+        .returning()
       coupleId = newCouple.id
     }
   } else {
     // Automatically create couple space for new user
-    const [newCouple] = await db.insert(couples).values({}).returning()
+    const [newCouple] = await db
+      .insert(couples)
+      .values({
+        inviteCode: crypto.randomUUID().slice(0, 8),
+      })
+      .returning()
     coupleId = newCouple.id
   }
 
