@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhCaretLeft, PhCaretRight, PhHeart } from '@phosphor-icons/vue'
+import { PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
 import type { CalendarEvent } from '~/shared/types'
 
 const props = defineProps<{
@@ -46,20 +46,29 @@ function isSelected(date: Date): boolean {
   return cal.toDateKey(date) === cal.toDateKey(props.selectedDate)
 }
 
-function hasSacred(date: Date): boolean {
-  return getDayEvents(date).some(e => e.isSacred)
-}
-
-function getDayAvatar(date: Date): { avatar?: string | null; name: string; isPartner: boolean } | null {
+// Compute subtle indicator dots for a given date
+function getEventDots(date: Date): Array<{ color: string; title: string }> {
   const evs = getDayEvents(date)
-  if (evs.length === 0) return null
-  const first = evs[0]
-  const isPartner = first.creatorId !== auth.user?.id
-  return {
-    avatar: first.creator?.avatar,
-    name: first.creator?.name || (isPartner ? 'Partner' : 'You'),
-    isPartner,
-  }
+  if (evs.length === 0) return []
+
+  const dots: Array<{ color: string; title: string }> = []
+
+  const hasSacred = evs.some((e) => e.isSacred)
+  const hasMyCouplePlan = evs.some(
+    (e) => !e.isSacred && !e.googleEventId && e.creatorId === auth.user?.id,
+  )
+  const hasPartnerPlan = evs.some(
+    (e) => !e.isSacred && e.creatorId !== auth.user?.id,
+  )
+  const hasGoogleSync = evs.some((e) => !!e.googleEventId)
+
+  if (hasSacred) dots.push({ color: 'bg-purple-600', title: 'Sacred Us Time' })
+  if (hasMyCouplePlan) dots.push({ color: 'bg-rose-500', title: 'Couple Plan' })
+  if (hasPartnerPlan) dots.push({ color: 'bg-teal-500', title: 'Partner Event' })
+  if (hasGoogleSync && dots.length < 3)
+    dots.push({ color: 'bg-slate-400', title: 'Google Calendar' })
+
+  return dots.slice(0, 3)
 }
 </script>
 
@@ -111,7 +120,7 @@ function getDayAvatar(date: Date): { avatar?: string | null; name: string; isPar
       </span>
     </div>
 
-    <!-- Month Day Grid -->
+    <!-- Month Day Grid: Clean Numbers with Subtle Dots -->
     <div class="grid grid-cols-7 gap-y-1 sm:gap-y-1.5 text-center place-items-center w-full min-w-0">
       <div
         v-for="(date, i) in cal.calendarDays"
@@ -119,7 +128,7 @@ function getDayAvatar(date: Date): { avatar?: string | null; name: string; isPar
         class="relative flex flex-col items-center justify-center cursor-pointer group py-0.5 w-full min-w-0 active:scale-95 transition-transform duration-100"
         @click="onSelectDay(date)"
       >
-        <!-- Day Touch Target -->
+        <!-- Day Number Container -->
         <div
           class="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-150 relative shrink-0"
           :class="[
@@ -130,48 +139,22 @@ function getDayAvatar(date: Date): { avatar?: string | null; name: string; isPar
                 : (cal.isCurrentMonth(date) ? 'text-black hover:bg-gray-100' : 'text-gray-300 opacity-40'))
           ]"
         >
-          <!-- If day has plans and is NOT selected: show photo avatar or heart -->
-          <template v-if="getDayEvents(date).length > 0 && !isSelected(date)">
-            <div
-              v-if="hasSacred(date)"
-              class="w-full h-full rounded-full bg-purple-600 text-white flex items-center justify-center shadow-xs"
-              title="Sacred Us Time"
-            >
-              <PhHeart :size="13" weight="fill" />
-            </div>
-
-            <div
-              v-else-if="getDayAvatar(date)?.avatar"
-              class="w-full h-full rounded-full overflow-hidden ring-2"
-              :class="getDayAvatar(date)?.isPartner ? 'ring-teal-500' : 'ring-rose-500'"
-            >
-              <img
-                :src="getDayAvatar(date)!.avatar!"
-                :alt="getDayAvatar(date)!.name"
-                class="w-full h-full object-cover"
-              />
-            </div>
-
-            <div
-              v-else
-              class="w-full h-full rounded-full flex items-center justify-center text-[10px] font-extrabold shadow-xs text-white"
-              :class="getDayAvatar(date)?.isPartner ? 'bg-teal-600' : 'bg-rose-600'"
-            >
-              {{ getDayAvatar(date)?.name.charAt(0).toUpperCase() }}
-            </div>
-          </template>
-
-          <!-- Normal day number -->
-          <span v-else>
-            {{ date.getDate() }}
-          </span>
+          <span>{{ date.getDate() }}</span>
         </div>
 
-        <!-- Activity indicator dot below day for multi-events -->
-        <span
-          v-if="getDayEvents(date).length > 1 && !isSelected(date)"
-          class="w-1 h-1 rounded-full bg-rose-500 mt-0.5"
-        />
+        <!-- Subtle Activity Indicator Dots below the day number -->
+        <div class="h-1.5 flex items-center justify-center gap-0.5 mt-0.5">
+          <span
+            v-for="(dot, dotIdx) in getEventDots(date)"
+            :key="dotIdx"
+            class="w-1.5 h-1.5 rounded-full shrink-0 transition-all"
+            :class="[
+              dot.color,
+              isSelected(date) ? 'opacity-90' : 'opacity-100'
+            ]"
+            :title="dot.title"
+          />
+        </div>
       </div>
     </div>
   </div>
