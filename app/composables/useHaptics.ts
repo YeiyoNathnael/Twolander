@@ -1,6 +1,7 @@
 /**
- * Subtle mobile haptic feedback helper using the standard Web Vibration API.
- * Safely degrades on unsupported devices/desktops.
+ * Mobile haptic feedback helper using the standard Web Vibration API.
+ * Uses 25ms+ durations to exceed Android hardware spin-up thresholds.
+ * Note: iOS Safari WebKit restricts the Web Vibration API.
  */
 export function useHaptics() {
   function vibrate(pattern: number | number[]) {
@@ -14,13 +15,13 @@ export function useHaptics() {
   }
 
   return {
-    /** Ultra-light 8ms tick for date selection, mood taps, tab switches */
-    light: () => vibrate(8),
-    /** Subtle 15ms tap for button presses, opens, modal toggles */
-    medium: () => vibrate(15),
+    /** Tactile 25ms tick for date selection, mood taps, tab switches */
+    light: () => vibrate(25),
+    /** Solid 45ms tap for button presses, opens, modal toggles */
+    medium: () => vibrate(45),
     /** Double pulse for confirmed saves, AI generation, milestone creation */
-    success: () => vibrate([10, 40, 12]),
+    success: () => vibrate([30, 60, 30]),
     /** Double warning pulse for conflict warning triggers */
-    warning: () => vibrate([20, 50, 20]),
+    warning: () => vibrate([45, 75, 45]),
   }
 }

@@ -3,7 +3,6 @@ import { PhMagnifyingGlass, PhPlus, PhSparkle, PhCalendar, PhChartLineUp, PhSun,
 import type { CalendarEvent } from '~/shared/types'
 import MobileCalendarCard from '~/components/calendar/MobileCalendarCard.vue'
 import AgendaList from '~/components/calendar/AgendaList.vue'
-import DailyMoodBar from '~/components/moods/DailyMoodBar.vue'
 import ConnectionTrendsCard from '~/components/dashboard/ConnectionTrendsCard.vue'
 import BentoStatsGrid from '~/components/dashboard/BentoStatsGrid.vue'
 import EventModal from '~/components/events/EventModal.vue'
@@ -44,42 +43,6 @@ const greeting = computed(() => {
   if (hour >= 17 && hour < 21) return { text: `Good evening${name}`, icon: PhSunHorizon }
   return { text: `Good night${name}`, icon: PhMoon }
 })
-
-// ── Quick Date Jumps ──────────────────────────────────────────────────────────
-
-const JUMP_OPTIONS = computed(() => {
-  const now = new Date()
-  const tomorrow = new Date(now)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  const dayOfWeek = now.getDay()
-  const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7
-  const thisWeekend = new Date(now)
-  thisWeekend.setDate(thisWeekend.getDate() + daysUntilSat)
-
-  const nextWeek = new Date(now)
-  nextWeek.setDate(nextWeek.getDate() + 7)
-
-  return [
-    { label: 'Today', date: now },
-    { label: 'Tomorrow', date: tomorrow },
-    { label: 'Weekend', date: thisWeekend },
-    { label: 'In 7d', date: nextWeek },
-  ]
-})
-
-function jumpToDate(d: Date) {
-  haptics.light()
-  selectedDate.value = d
-  if (d.getMonth() !== cal.currentMonth || d.getFullYear() !== cal.currentYear) {
-    cal.currentMonth = d.getMonth()
-    cal.currentYear = d.getFullYear()
-  }
-}
-
-function isJumpActive(d: Date): boolean {
-  return cal.toDateKey(selectedDate.value) === cal.toDateKey(d)
-}
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
@@ -176,12 +139,12 @@ watch([() => cal.currentYear, () => cal.currentMonth, () => loggedIn.value], loa
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 sm:gap-6 py-2 sm:py-4 font-sans w-full min-w-0">
+  <div class="flex flex-col gap-3.5 sm:gap-5 py-1 sm:py-3 font-sans w-full min-w-0">
 
-    <!-- Top Action Bar with Contextual Time Greeting -->
+    <!-- Top Action Bar -->
     <div class="flex items-center justify-between min-w-0 gap-2">
       <div class="min-w-0">
-        <h1 class="text-2xl sm:text-4xl font-extrabold text-black font-sans tracking-tight truncate">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-black font-sans tracking-tight truncate">
           Calendar
         </h1>
         <div class="flex items-center gap-1.5 mt-0.5 text-xs font-semibold text-gray-500 truncate">
@@ -190,11 +153,11 @@ watch([() => cal.currentYear, () => cal.currentMonth, () => loggedIn.value], loa
         </div>
       </div>
 
-      <!-- Action Buttons with subtle keyboard shortcut hints -->
-      <div class="flex items-center gap-2 shrink-0">
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <!-- Search Button with ⌘K -->
         <button
-          class="flex items-center gap-1.5 px-3 h-9 sm:h-10 rounded-full bg-white border border-gray-200 text-black hover:bg-gray-50 transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
+          class="w-9 h-9 sm:w-auto sm:px-3 sm:h-9 rounded-full bg-white border border-gray-200 text-black hover:bg-gray-50 transition-all shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
           title="Search plans (⌘K)"
           @click="haptics.light(); searchModalOpen = true"
         >
@@ -204,81 +167,59 @@ watch([() => cal.currentYear, () => cal.currentMonth, () => loggedIn.value], loa
 
         <!-- AI Magic Button -->
         <button
-          class="flex items-center gap-1.5 px-3.5 h-9 sm:h-10 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold hover:bg-rose-100 transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
+          class="w-9 h-9 sm:w-auto sm:px-3.5 sm:h-9 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold hover:bg-rose-100 transition-all shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
           title="Draft plans with AI (M)"
           @click="haptics.light(); aiModalOpen = true"
         >
-          <PhSparkle :size="14" weight="fill" class="text-rose-600" />
+          <PhSparkle :size="15" weight="fill" class="text-rose-600" />
           <span class="hidden sm:inline">AI Magic</span>
         </button>
 
         <!-- Add Event Button with N -->
         <button
-          class="flex items-center gap-1.5 px-3.5 h-9 sm:h-10 rounded-full bg-black text-white hover:bg-gray-800 transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+          class="w-9 h-9 sm:w-auto sm:px-3.5 sm:h-9 rounded-full bg-black text-white hover:bg-gray-800 transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer active:scale-95 shrink-0"
           title="Add new event (N)"
           @click="openCreate()"
         >
           <PhPlus :size="15" weight="bold" />
-          <span class="hidden sm:inline text-xs font-bold">New Plan</span>
+          <span class="hidden sm:inline text-xs font-bold">New</span>
         </button>
       </div>
     </div>
 
     <!-- Mobile Segmented View Control (visible on < lg) -->
-    <div class="lg:hidden flex items-center bg-gray-100 p-1 rounded-2xl w-full min-w-0">
+    <div class="lg:hidden flex items-center bg-gray-100/90 p-1 rounded-2xl w-full min-w-0">
       <button
         type="button"
-        class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer truncate min-w-0 active:scale-95"
+        class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer truncate min-w-0 active:scale-95"
         :class="mobileTab === 'calendar'
           ? 'bg-white text-black shadow-xs'
           : 'text-gray-500 hover:text-black'"
         @click="haptics.light(); mobileTab = 'calendar'"
       >
-        <PhCalendar :size="15" weight="bold" class="shrink-0" />
+        <PhCalendar :size="14" weight="bold" class="shrink-0" />
         <span class="truncate">Calendar</span>
       </button>
 
       <button
         type="button"
-        class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer truncate min-w-0 active:scale-95"
+        class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer truncate min-w-0 active:scale-95"
         :class="mobileTab === 'dashboard'
           ? 'bg-white text-black shadow-xs'
           : 'text-gray-500 hover:text-black'"
         @click="haptics.light(); mobileTab = 'dashboard'"
       >
-        <PhChartLineUp :size="15" weight="bold" class="shrink-0" />
+        <PhChartLineUp :size="14" weight="bold" class="shrink-0" />
         <span class="truncate">Rhythm & Stats</span>
       </button>
     </div>
 
-    <!-- Daily Responsive Empathy Mood Strip -->
-    <DailyMoodBar />
-
-    <!-- 1-Tap Quick Date Jump Row (Amie / Linear Style) -->
-    <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 w-full min-w-0">
-      <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono shrink-0 mr-1">
-        Jump to:
-      </span>
-      <button
-        v-for="opt in JUMP_OPTIONS"
-        :key="opt.label"
-        type="button"
-        class="px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all duration-150 cursor-pointer active:scale-95 shrink-0 select-none"
-        :class="isJumpActive(opt.date)
-          ? 'bg-black text-white shadow-2xs font-extrabold'
-          : 'bg-white hover:bg-rose-50 hover:text-rose-700 text-gray-700 border border-gray-200/80'"
-        @click="jumpToDate(opt.date)"
-      >
-        {{ opt.label }}
-      </button>
-    </div>
-
     <!-- Main Dual Grid: Responsive Column Behavior -->
-    <div class="grid grid-cols-1 lg:grid-cols-[440px_1fr] gap-6 items-start w-full min-w-0">
+    <div class="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-4 sm:gap-6 items-start w-full min-w-0">
 
       <!-- Left Column: Mobile Calendar Card + Inline Agenda -->
       <div
-        class="flex flex-col gap-5 w-full min-w-0"
+        class="flex flex-col gap-4 w-full min-w-0"
         :class="{ 'hidden lg:flex': mobileTab !== 'calendar' }"
       >
         <!-- Interactive Month Calendar Card -->
@@ -288,7 +229,7 @@ watch([() => cal.currentYear, () => cal.currentMonth, () => loggedIn.value], loa
           @open-new-event="openCreate"
         />
 
-        <!-- Inline Day Agenda List (with smooth crossfades and live indicators) -->
+        <!-- Inline Day Agenda List -->
         <AgendaList
           :date="selectedDate"
           :events="selectedDayEvents"
@@ -300,7 +241,7 @@ watch([() => cal.currentYear, () => cal.currentMonth, () => loggedIn.value], loa
 
       <!-- Right Column: Real Connection Trends Wave Chart & Bento Grid -->
       <div
-        class="flex flex-col gap-6 w-full min-w-0"
+        class="flex flex-col gap-5 w-full min-w-0"
         :class="{ 'hidden lg:flex': mobileTab !== 'dashboard' }"
       >
         <!-- Connection Trends Wave Chart -->

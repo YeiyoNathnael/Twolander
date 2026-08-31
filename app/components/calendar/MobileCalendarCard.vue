@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { PhCaretLeft, PhCaretRight, PhHeart } from '@phosphor-icons/vue'
-import { useSwipe } from '@vueuse/core'
 import type { CalendarEvent } from '~/shared/types'
 
 const props = defineProps<{
@@ -16,8 +15,6 @@ const cal = useCalendarStore()
 const eventsStore = useEventsStore()
 const auth = useAuthStore()
 const haptics = useHaptics()
-
-const cardRef = ref<HTMLElement | null>(null)
 
 function onSelectDay(date: Date) {
   haptics.light()
@@ -38,17 +35,6 @@ function onGoToday() {
   haptics.light()
   cal.goToToday()
 }
-
-// Enable smooth swipe left / right on mobile touch
-useSwipe(cardRef, {
-  onSwipeEnd(e, dir) {
-    if (dir === 'LEFT') {
-      onNextMonth()
-    } else if (dir === 'RIGHT') {
-      onPrevMonth()
-    }
-  },
-})
 
 const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -78,11 +64,8 @@ function getDayAvatar(date: Date): { avatar?: string | null; name: string; isPar
 </script>
 
 <template>
-  <div
-    ref="cardRef"
-    class="app-card p-4 sm:p-6 bg-white flex flex-col gap-4 font-sans select-none touch-pan-y w-full min-w-0 shadow-xs"
-  >
-    <!-- Card Header: Month + Controls (4px rhythm) -->
+  <div class="app-card p-3.5 sm:p-5 bg-white flex flex-col gap-3 font-sans w-full min-w-0 shadow-xs">
+    <!-- Card Header: Month + Controls -->
     <div class="flex items-center justify-between min-w-0">
       <div class="flex items-center gap-2 min-w-0">
         <h3 class="text-base sm:text-lg font-bold text-black font-sans truncate tracking-tight">
@@ -128,8 +111,8 @@ function getDayAvatar(date: Date): { avatar?: string | null; name: string; isPar
       </span>
     </div>
 
-    <!-- Month Day Grid with fluid cells and 44px touch targets -->
-    <div class="grid grid-cols-7 gap-y-1 sm:gap-y-2 text-center place-items-center w-full min-w-0">
+    <!-- Month Day Grid -->
+    <div class="grid grid-cols-7 gap-y-1 sm:gap-y-1.5 text-center place-items-center w-full min-w-0">
       <div
         v-for="(date, i) in cal.calendarDays"
         :key="i"
@@ -138,10 +121,10 @@ function getDayAvatar(date: Date): { avatar?: string | null; name: string; isPar
       >
         <!-- Day Touch Target -->
         <div
-          class="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-150 relative select-none shrink-0"
+          class="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-150 relative shrink-0"
           :class="[
             isSelected(date)
-              ? 'bg-black text-white shadow-md scale-105 z-10'
+              ? 'bg-black text-white shadow-sm scale-105 z-10'
               : (cal.isToday(date)
                 ? 'bg-rose-50 text-rose-600 ring-1 ring-rose-300 font-extrabold'
                 : (cal.isCurrentMonth(date) ? 'text-black hover:bg-gray-100' : 'text-gray-300 opacity-40'))
@@ -154,7 +137,7 @@ function getDayAvatar(date: Date): { avatar?: string | null; name: string; isPar
               class="w-full h-full rounded-full bg-purple-600 text-white flex items-center justify-center shadow-xs"
               title="Sacred Us Time"
             >
-              <PhHeart :size="15" weight="fill" />
+              <PhHeart :size="13" weight="fill" />
             </div>
 
             <div
@@ -171,7 +154,7 @@ function getDayAvatar(date: Date): { avatar?: string | null; name: string; isPar
 
             <div
               v-else
-              class="w-full h-full rounded-full flex items-center justify-center text-[11px] font-extrabold shadow-xs text-white"
+              class="w-full h-full rounded-full flex items-center justify-center text-[10px] font-extrabold shadow-xs text-white"
               :class="getDayAvatar(date)?.isPartner ? 'bg-teal-600' : 'bg-rose-600'"
             >
               {{ getDayAvatar(date)?.name.charAt(0).toUpperCase() }}
